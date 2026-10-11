@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: shiptrack-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
+      - key: SHIPTRACK_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        value: "*"
+      - key: EMAIL_REDIRECT_TO
+        value: kushalwashere@gmail.com

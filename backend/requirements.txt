@@ -1,0 +1,12 @@
+fastapi
+uvicorn[standard]
+sqlalchemy
+pyjwt
+openpyxl
+python-multipart
+reportlab
+
+# Optional - only needed when DATABASE_URL points at MySQL / PostgreSQL.
+# The default SQLite database needs no driver.
+# pymysql
+# psycopg[binary]

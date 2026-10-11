@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.db
+*.sqlite3
+
+# Node
+node_modules/
+dist/
+
+# Misc
+.env
+.DS_Store
+.dsh/
+
+# Runtime data (maildrop, backups, exports, generated PDFs)
+backend/data/
