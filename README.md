@@ -110,6 +110,19 @@ cd backend
 .\.venv\Scripts\python.exe tools\smtp_catcher.py          # then point SMTP_* at 127.0.0.1:2525
 ```
 
+### Live deployment
+
+| Piece | URL | Platform |
+| --- | --- | --- |
+| App (frontend) | https://frontend-chi-three-56no29pb13.vercel.app | Vercel |
+| API (backend) | https://shiptrack-api-87dp.onrender.com | Render |
+| Source | https://github.com/kushalsonawane/shiptrack | GitHub |
+
+- Render free tier sleeps after ~15 minutes idle; the first request after that takes about a minute to wake.
+- The Render disk is ephemeral: the SQLite database is recreated and auto-reseeded with demo data on every restart or deploy, so records created live do not survive restarts.
+- Pushes to `main` auto-deploy the backend on Render. The frontend is deployed with `vercel --prod` from the `frontend` folder.
+- The deployed backend runs in safe email test mode (`EMAIL_REDIRECT_TO=kushalwashere@gmail.com`, no SMTP credentials), so live notifications are logged, not sent to third parties.
+
 ### Tests
 
 ```powershell
