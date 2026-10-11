@@ -114,7 +114,7 @@ cd backend
 
 | Piece | URL | Platform |
 | --- | --- | --- |
-| App (frontend) | https://shiptrack-app.vercel.app | Vercel |
+| App (frontend) | https://shiptrack-smipl.vercel.app | Vercel |
 | API (backend) | https://shiptrack-api-87dp.onrender.com | Render |
 | Source | https://github.com/kushalsonawane/shiptrack | GitHub |
 
