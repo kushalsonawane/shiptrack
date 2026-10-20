@@ -97,13 +97,33 @@ Open **http://localhost:5173**.
 
 ### 3. Email delivery
 
-Emails are sent over the SMTP account configured in `backend/.env`. It currently holds a Gmail
-account (app password) used until SMIPL provides its own mail credentials - replace the
-`SMTP_*` lines and restart to switch senders; the sending code is identical.
+Dispatch, delivery, E-Way Bill and alert emails are sent automatically by the communication
+engine - nobody has to press anything. Each message is a plain-text + HTML email with the invoice
+and E-Way Bill PDFs attached and CC support, and every attempt is written to the Notification Log.
 
-For fully offline demos, a local catcher is included instead of a real provider - it runs the
-full SMTP conversation and files every message (with attachments) under
-`backend/data/maildrop/` as an openable `.eml`:
+Three transports are supported (`backend/app/mailer.py`); the one in use is detected from `.env`:
+
+| Transport | Set | Use it for |
+| --- | --- | --- |
+| Resend (HTTPS) | `RESEND_API_KEY`, `EMAIL_FROM` | Render / any host that blocks SMTP |
+| Brevo (HTTPS) | `BREVO_API_KEY`, `EMAIL_FROM` (verified sender) | Same, alternative provider |
+| SMTP | `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` | Laptop, local catcher, company mail server |
+
+Render's free tier blocks outbound SMTP, so the deployed backend should use Resend or Brevo.
+Resend only delivers to your own account address until you verify a domain; keep
+`EMAIL_REDIRECT_TO` set to that address while testing. Set `RESEND_API_KEY` in the Render dashboard.
+
+- **Test mode:** with `EMAIL_REDIRECT_TO` set, every email goes only to that address (the body notes the
+  intended recipient). Remove it to send to real contacts.
+- **Automatic retry:** failed emails are retried on every scheduled cycle (`ALERT_INTERVAL_MINUTES`) up to
+  `EMAIL_MAX_RETRIES` times. Only when retries run out does the "communication failure" alert go to dispatch.
+  The Retry button in the log still works at any time.
+- **Check the setup:** Notifications page -> *Send test email* (Admin). The page and the dashboard show the
+  connected provider and delivered / queued / failed counts.
+- **No transport configured:** messages are still rendered and logged, with status *Queued* (never a false *Sent*).
+- WhatsApp / SMS have no provider yet; those messages are recorded as *Queued*.
+
+For fully offline demos, a local SMTP catcher files every message as an openable `.eml`:
 
 ```powershell
 cd backend
@@ -121,7 +141,7 @@ cd backend
 - Render free tier sleeps after ~15 minutes idle; the first request after that takes about a minute to wake.
 - The Render disk is ephemeral: the SQLite database is recreated and auto-reseeded with demo data on every restart or deploy, so records created live do not survive restarts.
 - Pushes to `main` auto-deploy the backend on Render. The frontend is deployed with `vercel --prod` from the `frontend` folder, then the short alias is refreshed: `vercel alias set <deployment-url> shiptrack-app.vercel.app`.
-- The deployed backend runs in safe email test mode (`EMAIL_REDIRECT_TO=kushalwashere@gmail.com`, no SMTP credentials), so live notifications are logged, not sent to third parties.
+- The deployed backend runs in email test mode (`EMAIL_REDIRECT_TO=kushalwashere@gmail.com`). Add `RESEND_API_KEY` in the Render dashboard to turn on real sending; until then notifications are logged as Queued.
 
 ### Tests
 
@@ -190,7 +210,8 @@ can read the audit log or run maintenance actions.
 | `ALERT_INTERVAL_MINUTES`                | Background alert interval (default 30)                       |
 | `BACKUP_RETENTION`                      | Daily backups to keep (default 14)                           |
 | `BACKGROUND_JOBS`                       | Set `false` to disable the scheduler (tests do)              |
-| `SMTP_*`                                | Real email sending when `SMTP_HOST` is set                   |
+| `EMAIL_PROVIDER` / `RESEND_API_KEY` / `BREVO_API_KEY` / `EMAIL_FROM` / `EMAIL_MAX_RETRIES` | HTTPS email transport and retry limit |
+| `SMTP_*`                                | SMTP transport (laptop / company mail server)                |
 
 ## Going live (the honest part)
 
@@ -200,9 +221,9 @@ can read the audit log or run maintenance actions.
   the provider adapter (`app/eway_client.py`) implements the standard authenticate -> generate
   flow - adjust the two paths to your GSP's API docs if it differs. Sandbox PDFs are watermarked
   "not valid for goods movement" so demo documents can never be mistaken for real ones.
-- **Email:** set `SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM` and all messages (dispatch, delivery,
-  EWB, alerts) are really sent - with PDF attachments and CC - via `smtplib`. Without SMTP,
-  every message is rendered, stored and its attachments prepared, with Sent/Failed logging + retry.
+- **Email:** set `RESEND_API_KEY` (or `BREVO_API_KEY`, or `SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM`) and all
+  messages (dispatch, delivery, EWB, alerts) are really sent - HTML + text, with PDF attachments and CC - and
+  failures are retried automatically. Without a transport, every message is rendered and stored as *Queued*.
 - **Company GSTIN** is intentionally blank until set in `.env` (the PDF prints "To be configured"
   rather than inventing a number).
 - WhatsApp/SMS remain recorded-stub channels (provider integration pending).

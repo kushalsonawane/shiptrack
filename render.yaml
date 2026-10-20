@@ -15,3 +15,10 @@ services:
         value: "*"
       - key: EMAIL_REDIRECT_TO
         value: kushalwashere@gmail.com
+      # Email: set the key in the Render dashboard (never commit it).
+      - key: EMAIL_PROVIDER
+        value: resend
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: ShipTrack <onboarding@resend.dev>

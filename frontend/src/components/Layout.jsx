@@ -115,10 +115,14 @@ export default function Layout() {
               </span>
               <span
                 className="mode-chip"
-                title={company.smtp_configured ? "SMTP configured - emails are sent" : "No SMTP - emails are logged"}
+                title={
+                  company.smtp_configured
+                    ? `Email is sent through ${company.email_provider}${company.email_test_mode ? " (test mode: all mail goes to the test inbox)" : ""}`
+                    : "No email provider configured - messages are logged only"
+                }
               >
                 <span className={`mode-dot ${company.smtp_configured ? "green" : "blue"}`} />
-                {company.smtp_configured ? "Email live" : "Email logged"}
+                {company.smtp_configured ? (company.email_test_mode ? "Email test mode" : "Email live") : "Email off"}
               </span>
             </div>
           )}

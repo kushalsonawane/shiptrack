@@ -2,17 +2,12 @@
 
 import json
 import random
-import smtplib
 from datetime import date
-from email.encoders import encode_base64
-from email.mime.base import MIMEBase
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
 from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from . import config, models, pdfgen
+from . import config, mailer, models, pdfgen
 from .eway_client import EwayError, generate_eway, validity_days
 
 settings = config.settings
@@ -412,28 +407,9 @@ def ensure_dispatch_documents(db: Session, shipment: models.Shipment):
     return list(unique.values())
 
 
-def _send_email_smtp(recipient: str, subject: str, body: str, cc: str = None, attachment_files=None):
-    message = MIMEMultipart()
-    message["Subject"] = subject
-    message["From"] = settings.smtp_from
-    message["To"] = recipient
-    if cc:
-        message["Cc"] = cc
-    message.attach(MIMEText(body, "plain", "utf-8"))
-    for name, path, mime in attachment_files or []:
-        maintype, _, subtype = (mime or "application/octet-stream").partition("/")
-        part = MIMEBase(maintype, subtype or "octet-stream")
-        part.set_payload(Path(path).read_bytes())
-        encode_base64(part)
-        part.add_header("Content-Disposition", "attachment", filename=name)
-        message.attach(part)
-    recipients = [recipient] + ([cc] if cc else [])
-    with smtplib.SMTP(settings.smtp_host, settings.smtp_port, timeout=20) as server:
-        if settings.smtp_starttls:
-            server.starttls()
-        if settings.smtp_user and settings.smtp_pass:
-            server.login(settings.smtp_user, settings.smtp_pass)
-        server.sendmail(settings.smtp_from, recipients, message.as_string())
+def _send_email(recipient: str, subject: str, body: str, cc: str = None, attachment_files=None):
+    """Deliver through whichever transport is configured (see mailer.py)."""
+    return mailer.send(recipient, subject, body, cc=cc, attachment_files=attachment_files)
 
 
 def _apply_email_redirect(recipient: str, subject: str, body: str):
@@ -479,9 +455,9 @@ def send_notification(
         attachments=attachments,
         cc=None if redirected else cc,
     )
-    if channel == "Email" and settings.smtp_host:
+    if channel == "Email" and mailer.is_configured():
         try:
-            _send_email_smtp(recipient, subject, body, cc=None if redirected else cc, attachment_files=attachment_files)
+            _send_email(recipient, subject, body, cc=None if redirected else cc, attachment_files=attachment_files)
             note.status = "Sent"
             note.sent_at = models.now()
         except Exception as exc:
@@ -492,7 +468,7 @@ def send_notification(
         # is still fully rendered and recorded, but claiming "Sent" here would be a
         # false delivery record, so it is logged as Queued instead.
         note.status = "Queued"
-        note.error = "SMTP is not configured - message rendered and logged only."
+        note.error = "No email transport is configured - message rendered and logged only."
     else:
         # SMS and WhatsApp have no provider integration. The message is composed and
         # kept for the audit trail, but it is never transmitted; recording "Sent"
@@ -514,7 +490,7 @@ def resend_notification(db: Session, note: models.Notification) -> models.Notifi
     failure and its error are recorded again.
     """
     note.retry_count = (note.retry_count or 0) + 1
-    if note.channel == "Email" and settings.smtp_host:
+    if note.channel == "Email" and mailer.is_configured():
         attachment_files = []
         for name in [part.strip() for part in (note.attachments or "").split(",") if part.strip()]:
             document = db.query(models.Document).filter(models.Document.file_name == name).first()
@@ -532,7 +508,7 @@ def resend_notification(db: Session, note: models.Notification) -> models.Notifi
             note.recipient, note.subject, note.body
         )
         try:
-            _send_email_smtp(
+            _send_email(
                 recipient, subject, body,
                 cc=None if redirected else note.cc, attachment_files=attachment_files or None,
             )
@@ -553,7 +529,7 @@ def resend_notification(db: Session, note: models.Notification) -> models.Notifi
         note.status = "Queued"
         note.sent_at = None
         note.error = (
-            "SMTP is not configured - message rendered and logged only."
+            "No email transport is configured - message rendered and logged only."
             if note.channel == "Email"
             else f"{note.channel} provider is not configured - message recorded only."
         )

@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth.jsx";
 import { LogoMark } from "../components/Logo.jsx";
 import { Button, ErrorNote, Field } from "../components/ui.jsx";
-import { IconFileCheck, IconReceipt, IconSend } from "../components/Icons.jsx";
 
 export default function Login() {
   const { login } = useAuth();
@@ -32,38 +31,36 @@ export default function Login() {
     <div className="login-wrap">
       <aside className="login-aside">
         <div className="aside-brand">
-          <LogoMark size={46} />
+          <span className="aside-logo">
+            <LogoMark size={46} alt="Shreemaruti Instruments Pvt. Ltd." />
+          </span>
           <div>
             <div className="aside-name">ShipTrack</div>
             <div className="aside-sub">SMIPL Shipment Desk</div>
           </div>
         </div>
         <div>
-          <h2 className="aside-head">
-            GST invoices, E-Way Bills and dispatch updates, on one desk.
-          </h2>
-          <ul className="aside-list">
+          <h2 className="aside-head">One record for every consignment, from invoice to delivery.</h2>
+          <ol className="aside-steps">
             <li>
-              <span className="aside-ic">
-                <IconReceipt width={15} height={15} />
-              </span>
-              Tax invoices with HSN, tax split and print-ready PDFs
+              <b>Invoice</b>
+              <span>GST tax invoice with HSN and tax split</span>
             </li>
             <li>
-              <span className="aside-ic">
-                <IconFileCheck width={15} height={15} />
-              </span>
-              E-Way Bills generated, tracked and updated on dispatch
+              <b>E-Way Bill</b>
+              <span>Created with the invoice, Part-B at dispatch</span>
             </li>
             <li>
-              <span className="aside-ic">
-                <IconSend width={15} height={15} />
-              </span>
-              Dispatch notes delivered by Email, with SMS and WhatsApp on the roadmap
+              <b>Dispatch email</b>
+              <span>Sent to the right contact with the documents attached</span>
             </li>
-          </ul>
+            <li>
+              <b>Tracking</b>
+              <span>Status, POD and the full history on one shipment ID</span>
+            </li>
+          </ol>
         </div>
-        <div className="aside-foot">Shreemaruti Instruments Pvt. Ltd. - Valvada, Vapi, Gujarat</div>
+        <div className="aside-foot">Shreemaruti Instruments Pvt. Ltd. · Valvada, Vapi, Gujarat</div>
       </aside>
       <main className="login-main">
         <div className="login-panel">
@@ -76,12 +73,10 @@ export default function Login() {
               <div className="brand-sub">SMIPL Shipment Desk</div>
             </div>
           </div>
-          <div className="card an">
-            <h1 className="display" style={{ fontSize: 25, marginBottom: 4 }}>
-              Sign in
-            </h1>
+          <div className="card login-card">
+            <h1 className="login-title">Sign in</h1>
             <div className="small muted" style={{ marginBottom: 18 }}>
-              Use your credentials, or pick a demo account below.
+              Use your work account, or pick a demo role below.
             </div>
             <ErrorNote error={error} />
             <form onSubmit={submit}>
@@ -107,9 +102,9 @@ export default function Login() {
                 {busy ? "Signing in..." : "Sign in"}
               </Button>
             </form>
-            <div style={{ marginTop: 18, borderTop: "1px solid var(--border)", paddingTop: 14 }}>
+            <div className="demo-block">
               <div className="small muted" style={{ marginBottom: 8 }}>
-                Demo accounts - password <span className="mono">demo123</span>. Click one to fill the form:
+                Demo roles · password <span className="mono">demo123</span>
               </div>
               <div className="demo-grid">
                 {["Admin", "Sales", "Dispatch", "Accounts", "Management"].map((role) => (
@@ -123,7 +118,6 @@ export default function Login() {
                     }}
                   >
                     <b>{role}</b>
-                    {role.toLowerCase()}@shiptrack.local
                   </button>
                 ))}
               </div>

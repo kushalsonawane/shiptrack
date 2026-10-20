@@ -66,6 +66,22 @@ def dashboard(db: Session = Depends(get_db), user: models.User = Depends(get_cur
     )
     exceptions = db.query(Shipment).filter(Shipment.status == "Exception").count()
 
+    email_counts = {"Sent": 0, "Queued": 0, "Failed": 0}
+    for status, count in (
+        db.query(models.Notification.status, func.count(models.Notification.id))
+        .filter(models.Notification.channel == "Email")
+        .group_by(models.Notification.status)
+        .all()
+    ):
+        if status in email_counts:
+            email_counts[status] = count
+    last_email = (
+        db.query(models.Notification)
+        .filter(models.Notification.channel == "Email", models.Notification.status == "Sent")
+        .order_by(models.Notification.sent_at.desc())
+        .first()
+    )
+
     status_breakdown = [
         {"status": status, "count": count}
         for status, count in db.query(Shipment.status, func.count(Shipment.id)).group_by(Shipment.status).all()
@@ -104,6 +120,12 @@ def dashboard(db: Session = Depends(get_db), user: models.User = Depends(get_cur
         "customer_notifications_sent": customer_notifications_sent,
         "vendor_notifications_sent": vendor_notifications_sent,
         "exception_shipments": exceptions,
+        "email": {
+            "sent": email_counts["Sent"],
+            "queued": email_counts["Queued"],
+            "failed": email_counts["Failed"],
+            "last_sent_at": last_email.sent_at.isoformat() if last_email and last_email.sent_at else None,
+        },
         "status_breakdown": status_breakdown,
         "recent_shipments": recent,
     }

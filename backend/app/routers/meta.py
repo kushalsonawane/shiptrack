@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends
 
 from .. import models
+from .. import mailer
 from ..config import settings
 from ..security import get_current_user
 
@@ -22,5 +23,7 @@ def company(user: models.User = Depends(get_current_user)):
         "invoice_prefix": settings.invoice_prefix,
         "ewb_mode": settings.ewb_mode,
         "auto_ewb": settings.auto_ewb,
-        "smtp_configured": bool(settings.smtp_host),
+        "smtp_configured": mailer.is_configured(),
+        "email_provider": mailer.provider(),
+        "email_test_mode": bool(settings.email_redirect_to),
     }

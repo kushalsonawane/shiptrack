@@ -16,3 +16,7 @@ dist/
 
 # Runtime data (maildrop, backups, exports, generated PDFs)
 backend/data/
+
+# Local archives and presentation working assets
+*.rar
+ppt_assets/

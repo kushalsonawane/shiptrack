@@ -373,7 +373,7 @@ def _seed_demo_flow(db: Session) -> None:
             shipment_id=s1.id, party_type="customer", party_id=sopan.id, channel="WhatsApp",
             recipient="+91 98220 33445", subject="Shipment dispatched",
             body=f"Dispatch update: Invoice {inv1.invoice_no} | Courier Falcon Cargo | Docket 20/8135 | Dispatched on {s1.dispatch_date.strftime('%d-%m-%Y')}. - Shreemaruti Instruments Pvt. Ltd.",
-            status="Sent", sent_at=dispatched_at,
+            status="Queued", error="WhatsApp provider is not configured - message recorded only.",
         )
     )
     db.add(

@@ -72,6 +72,14 @@ class Settings:
         self.ewb_client_id = os.environ.get("EWB_CLIENT_ID", "").strip()
         self.ewb_client_secret = os.environ.get("EWB_CLIENT_SECRET", "").strip()
 
+        # Email transport. Render's free tier blocks outbound SMTP, so the deployed
+        # app should use an HTTPS provider (Resend or Brevo); SMTP stays as a fallback.
+        self.email_provider = os.environ.get("EMAIL_PROVIDER", "").strip().lower()
+        self.resend_api_key = os.environ.get("RESEND_API_KEY", "").strip()
+        self.brevo_api_key = os.environ.get("BREVO_API_KEY", "").strip()
+        self.email_from = os.environ.get("EMAIL_FROM", "").strip()
+        self.email_from_name = os.environ.get("EMAIL_FROM_NAME", "").strip()
+        self.email_max_retries = int(os.environ.get("EMAIL_MAX_RETRIES", "3") or "3")
         self.smtp_host = os.environ.get("SMTP_HOST", "").strip()
         self.smtp_port = int(os.environ.get("SMTP_PORT", "587") or "587")
         self.smtp_user = os.environ.get("SMTP_USER", "").strip()

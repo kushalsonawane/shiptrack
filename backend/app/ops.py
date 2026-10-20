@@ -8,7 +8,7 @@ from pathlib import Path
 
 from sqlalchemy.orm import Session
 
-from . import config, models
+from . import config, mailer, models
 from .database import DATA_DIR, DATABASE_URL
 from .services import (
     format_date,
@@ -16,6 +16,7 @@ from .services import (
     render_comm_failure_alert,
     render_delay_alert,
     render_ewb_expiry_alert,
+    resend_notification,
     send_notification,
 )
 
@@ -37,6 +38,36 @@ def _recent_alert(db: Session, subject: str, hours: int = 24) -> bool:
     )
 
 
+def retry_failed_emails(db: Session) -> dict:
+    """Automatic retry for the Failed -> Retry rule of the communication engine.
+
+    Every scheduled cycle re-attempts failed emails that have not yet used up
+    EMAIL_MAX_RETRIES, so a transient provider outage heals without anyone
+    clicking Retry. Nothing is attempted while no transport is configured.
+    """
+    result = {"retried": 0, "recovered": 0}
+    if not mailer.is_configured():
+        return result
+    pending = (
+        db.query(models.Notification)
+        .filter(
+            models.Notification.status == "Failed",
+            models.Notification.channel == "Email",
+            (models.Notification.retry_count.is_(None))
+            | (models.Notification.retry_count < settings.email_max_retries),
+        )
+        .order_by(models.Notification.id)
+        .limit(25)
+        .all()
+    )
+    for note in pending:
+        resend_notification(db, note)
+        result["retried"] += 1
+        if note.status == "Sent":
+            result["recovered"] += 1
+    return result
+
+
 def run_alerts(db: Session) -> dict:
     """The scheduled rules from the project document (section 13).
 
@@ -46,6 +77,7 @@ def run_alerts(db: Session) -> dict:
     """
     today = date.today()
     summary = {"ewb_expiring": 0, "delays": 0, "vendor_delays": 0, "comm_failures": 0}
+    summary.update(retry_failed_emails(db))
 
     expiring = (
         db.query(models.EWayBill)
@@ -130,6 +162,10 @@ def run_alerts(db: Session) -> dict:
 
     failed = db.query(models.Notification).filter(models.Notification.status == "Failed").all()
     for note in failed:
+        # While retries remain the failure may still heal, so only escalate once
+        # the automatic attempts are used up (or when nothing can be retried).
+        if mailer.is_configured() and note.channel == "Email" and (note.retry_count or 0) < settings.email_max_retries:
+            continue
         subject, body = render_comm_failure_alert(note)
         if _recent_alert(db, subject, hours=168):
             continue
